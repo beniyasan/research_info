@@ -13,3 +13,6 @@ reports/monthly/
 reports/evolution/
 
 logs/
+.codex/
+.serena/
+.agents/
