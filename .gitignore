@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.env
+secrets/
+
+data/*.db
+data/*.db-*
+data/raw/
+
+reports/daily/
+reports/weekly/
+reports/monthly/
+reports/evolution/
+
+logs/

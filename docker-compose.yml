@@ -1,0 +1,22 @@
+services:
+  ai-researcher:
+    build: .
+    container_name: ai-researcher
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Tokyo
+      AI_RESEARCH_TZ: Asia/Tokyo
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-global}
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/google-service-account.json
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash}
+      GEMINI_GROUNDING_MODEL: ${GEMINI_GROUNDING_MODEL:-gemini-3.5-flash}
+      GOOGLE_DRIVE_CLIENT_SECRET: /secrets/google-drive-oauth-client.json
+      GOOGLE_DRIVE_TOKEN: /secrets/google-drive-token.json
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      QIITA_TOKEN: ${QIITA_TOKEN:-}
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+      - ./secrets:/secrets

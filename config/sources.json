@@ -1,0 +1,461 @@
+{
+  "reporting": {
+    "score_threshold": 3.0,
+    "max_articles": 30
+  },
+  "selection": {
+    "mode": "llm",
+    "provider": "vertex_gemini",
+    "model": "gemini-3.5-flash",
+    "candidate_limit": 80,
+    "command_env": "AI_RESEARCH_LLM_COMMAND",
+    "timeout_seconds": 300,
+    "temperature": 0.2,
+    "max_output_tokens": 8192,
+    "vertex": {
+      "project_env": "GOOGLE_CLOUD_PROJECT",
+      "location_env": "GOOGLE_CLOUD_LOCATION",
+      "default_location": "global"
+    }
+  },
+  "grounding": {
+    "enabled": true,
+    "model": "gemini-3.5-flash",
+    "timeout_seconds": 180,
+    "temperature": 0.1,
+    "max_output_tokens": 4096,
+    "article_verification": {
+      "enabled": true,
+      "batch_size": 8,
+      "timeout_seconds": 180,
+      "max_output_tokens": 4096,
+      "fail_report_on_error": false
+    },
+    "source_discovery": {
+      "enabled": true,
+      "limit": 10,
+      "candidate_source_limit": 5,
+      "min_confidence": 0.65,
+      "validate_feeds": true,
+      "timeout_seconds": 180,
+      "max_output_tokens": 4096,
+      "fail_run_on_error": false,
+      "queries": [
+        "high signal AI engineering RSS feeds LLM agents RAG evaluations developer tools",
+        "official AI model release blogs RSS Anthropic OpenAI Google DeepMind Meta Mistral Microsoft NVIDIA AWS",
+        "LLM application engineering newsletters RSS AI agents inference evals",
+        "AI research digest RSS arxiv LLM agents multimodal code generation"
+      ]
+    }
+  },
+  "limits": {
+    "active_keywords": 80,
+    "active_sources": 40
+  },
+  "notifications": {
+    "discord": {
+      "enabled": true,
+      "username": "AI Researcher",
+      "top_articles": 5,
+      "color": 3447003
+    }
+  },
+  "integrations": {
+    "google_drive": {
+      "enabled": true,
+      "root_folder_name": "AI Researcher",
+      "client_secret_env": "GOOGLE_DRIVE_CLIENT_SECRET",
+      "token_env": "GOOGLE_DRIVE_TOKEN",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive.file"
+      ],
+      "mime_type": "text/markdown",
+      "fail_report_on_error": false
+    }
+  },
+  "keywords": [
+    "AI",
+    "生成AI",
+    "LLM",
+    "AI agent",
+    "AIエージェント",
+    "RAG",
+    "MCP",
+    "Model Context Protocol",
+    "Claude Code",
+    "OpenAI",
+    "ChatGPT",
+    "Anthropic",
+    "Claude",
+    "Gemini",
+    "DeepMind",
+    "Hugging Face",
+    "Llama",
+    "Mistral",
+    "Meta AI",
+    "Microsoft Copilot",
+    "NVIDIA",
+    "AWS Bedrock",
+    "LangChain",
+    "LlamaIndex",
+    "DeepLearning.AI",
+    "The Batch",
+    "Import AI",
+    "Speaker Deck",
+    "Cursor",
+    "GitHub Copilot",
+    "SWE-agent",
+    "evals",
+    "inference",
+    "fine-tuning",
+    "embedding",
+    "vector database",
+    "AI駆動開発"
+  ],
+  "sources": [
+    {
+      "id": "zenn-ai",
+      "name": "Zenn AI Topic",
+      "type": "rss",
+      "url": "https://zenn.dev/topics/ai/feed",
+      "category": "jp-tech",
+      "priority": 1.2,
+      "max_items": 30
+    },
+    {
+      "id": "zenn-llm",
+      "name": "Zenn LLM Topic",
+      "type": "rss",
+      "url": "https://zenn.dev/topics/llm/feed",
+      "category": "jp-tech",
+      "priority": 1.2,
+      "max_items": 30
+    },
+    {
+      "id": "zenn-claude-code",
+      "name": "Zenn Claude Code Topic",
+      "type": "rss",
+      "url": "https://zenn.dev/topics/claudecode/feed",
+      "category": "jp-tech",
+      "priority": 1.1,
+      "max_items": 30
+    },
+    {
+      "id": "qiita-ai",
+      "name": "Qiita tag:AI",
+      "type": "qiita",
+      "query": "tag:AI",
+      "category": "jp-tech",
+      "priority": 1.0,
+      "max_items": 30
+    },
+    {
+      "id": "qiita-chatgpt",
+      "name": "Qiita tag:ChatGPT",
+      "type": "qiita",
+      "query": "tag:ChatGPT",
+      "category": "jp-tech",
+      "priority": 1.0,
+      "max_items": 30
+    },
+    {
+      "id": "qiita-llm",
+      "name": "Qiita tag:LLM",
+      "type": "qiita",
+      "query": "tag:LLM",
+      "category": "jp-tech",
+      "priority": 1.0,
+      "max_items": 30
+    },
+    {
+      "id": "openai-news",
+      "name": "OpenAI News",
+      "type": "rss",
+      "url": "https://openai.com/news/rss.xml",
+      "category": "official",
+      "priority": 1.6,
+      "max_items": 25
+    },
+    {
+      "id": "google-ai",
+      "name": "Google AI Blog",
+      "type": "rss",
+      "url": "https://blog.google/technology/ai/rss/",
+      "category": "official",
+      "priority": 1.4,
+      "max_items": 25
+    },
+    {
+      "id": "huggingface-blog",
+      "name": "Hugging Face Blog",
+      "type": "rss",
+      "url": "https://huggingface.co/blog/feed.xml",
+      "category": "official",
+      "priority": 1.3,
+      "max_items": 25
+    },
+    {
+      "id": "anthropic-news",
+      "name": "Anthropic News",
+      "type": "html_index",
+      "url": "https://www.anthropic.com/news",
+      "include_paths": [
+        "/news/",
+        "/research/",
+        "/engineering/"
+      ],
+      "exclude_paths": [
+        "/news#"
+      ],
+      "tags": [
+        "Anthropic",
+        "Claude"
+      ],
+      "category": "official",
+      "priority": 1.6,
+      "max_items": 25
+    },
+    {
+      "id": "deepmind-blog",
+      "name": "Google DeepMind Blog",
+      "type": "rss",
+      "url": "https://deepmind.google/blog/rss.xml",
+      "category": "official",
+      "priority": 1.5,
+      "max_items": 25
+    },
+    {
+      "id": "microsoft-ai",
+      "name": "Microsoft AI",
+      "type": "rss",
+      "url": "https://news.microsoft.com/source/topics/ai/feed/",
+      "category": "official",
+      "priority": 1.3,
+      "max_items": 25
+    },
+    {
+      "id": "microsoft-research",
+      "name": "Microsoft Research",
+      "type": "rss",
+      "url": "https://www.microsoft.com/en-us/research/feed/",
+      "category": "research",
+      "priority": 1.1,
+      "max_items": 20
+    },
+    {
+      "id": "meta-ai-blog",
+      "name": "Meta AI Blog",
+      "type": "html_index",
+      "url": "https://ai.meta.com/blog/",
+      "include_paths": [
+        "/blog/"
+      ],
+      "tags": [
+        "Meta AI",
+        "Llama"
+      ],
+      "category": "official",
+      "priority": 1.3,
+      "max_items": 25
+    },
+    {
+      "id": "meta-engineering",
+      "name": "Meta Engineering",
+      "type": "rss",
+      "url": "https://engineering.fb.com/feed/",
+      "category": "dev-community",
+      "priority": 1.0,
+      "max_items": 20
+    },
+    {
+      "id": "mistral-news",
+      "name": "Mistral AI News",
+      "type": "html_index",
+      "url": "https://mistral.ai/news/",
+      "include_paths": [
+        "/news/"
+      ],
+      "tags": [
+        "Mistral"
+      ],
+      "category": "official",
+      "priority": 1.3,
+      "max_items": 25
+    },
+    {
+      "id": "nvidia-genai",
+      "name": "NVIDIA Generative AI Blog",
+      "type": "rss",
+      "url": "https://blogs.nvidia.com/blog/category/generative-ai/feed/",
+      "category": "official",
+      "priority": 1.1,
+      "max_items": 20
+    },
+    {
+      "id": "nvidia-developer-genai",
+      "name": "NVIDIA Developer Generative AI",
+      "type": "rss",
+      "url": "https://developer.nvidia.com/blog/category/generative-ai/feed/",
+      "category": "dev-community",
+      "priority": 1.0,
+      "max_items": 20
+    },
+    {
+      "id": "aws-ml-blog",
+      "name": "AWS Machine Learning Blog",
+      "type": "rss",
+      "url": "https://aws.amazon.com/blogs/machine-learning/feed/",
+      "category": "official",
+      "priority": 1.1,
+      "max_items": 25
+    },
+    {
+      "id": "langchain-blog",
+      "name": "LangChain Blog",
+      "type": "rss",
+      "url": "https://blog.langchain.com/rss.xml",
+      "category": "dev-community",
+      "priority": 1.1,
+      "max_items": 25
+    },
+    {
+      "id": "llamaindex-blog",
+      "name": "LlamaIndex Blog",
+      "type": "html_index",
+      "url": "https://www.llamaindex.ai/blog",
+      "include_paths": [
+        "/blog/"
+      ],
+      "tags": [
+        "LlamaIndex",
+        "RAG",
+        "agent"
+      ],
+      "category": "dev-community",
+      "priority": 1.1,
+      "max_items": 25
+    },
+    {
+      "id": "github-ai-ml",
+      "name": "GitHub Blog AI/ML",
+      "type": "rss",
+      "url": "https://github.blog/ai-and-ml/feed/",
+      "category": "dev-community",
+      "priority": 1.1,
+      "max_items": 25
+    },
+    {
+      "id": "arxiv-cs-ai",
+      "name": "arXiv cs.AI",
+      "type": "rss",
+      "url": "https://export.arxiv.org/rss/cs.AI",
+      "category": "research",
+      "priority": 1.1,
+      "max_items": 25
+    },
+    {
+      "id": "arxiv-cs-cl",
+      "name": "arXiv cs.CL",
+      "type": "rss",
+      "url": "https://export.arxiv.org/rss/cs.CL",
+      "category": "research",
+      "priority": 1.1,
+      "max_items": 25
+    },
+    {
+      "id": "hn-ai",
+      "name": "Hacker News AI Search",
+      "type": "hn_algolia",
+      "query": "AI OR LLM OR agent",
+      "category": "dev-community",
+      "priority": 1.0,
+      "max_items": 30
+    },
+    {
+      "id": "techcrunch-ai",
+      "name": "TechCrunch AI",
+      "type": "rss",
+      "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+      "category": "news",
+      "priority": 0.9,
+      "max_items": 25
+    },
+    {
+      "id": "venturebeat-ai",
+      "name": "VentureBeat AI",
+      "type": "rss",
+      "url": "https://venturebeat.com/category/ai/feed",
+      "category": "news",
+      "priority": 0.9,
+      "max_items": 25
+    },
+    {
+      "id": "mit-tr-ai",
+      "name": "MIT Technology Review AI",
+      "type": "rss",
+      "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed/",
+      "category": "news",
+      "priority": 0.9,
+      "max_items": 25
+    },
+    {
+      "id": "import-ai",
+      "name": "Import AI",
+      "type": "rss",
+      "url": "https://importai.substack.com/feed",
+      "category": "newsletter",
+      "priority": 0.9,
+      "max_items": 20
+    },
+    {
+      "id": "the-batch",
+      "name": "The Batch by DeepLearning.AI",
+      "type": "deeplearning_batch",
+      "url": "https://www.deeplearning.ai/the-batch",
+      "tags": [
+        "DeepLearning.AI",
+        "The Batch",
+        "AI newsletter"
+      ],
+      "category": "newsletter",
+      "priority": 0.9,
+      "max_items": 20
+    },
+    {
+      "id": "speakerdeck-technology",
+      "name": "Speaker Deck Technology",
+      "type": "rss",
+      "url": "https://speakerdeck.com/c/technology.atom",
+      "category": "slides",
+      "priority": 0.7,
+      "max_items": 20
+    },
+    {
+      "id": "speakerdeck-programming",
+      "name": "Speaker Deck Programming",
+      "type": "rss",
+      "url": "https://speakerdeck.com/c/programming.atom",
+      "category": "slides",
+      "priority": 0.7,
+      "max_items": 20
+    },
+    {
+      "id": "speakerdeck-research",
+      "name": "Speaker Deck Research",
+      "type": "rss",
+      "url": "https://speakerdeck.com/c/research.atom",
+      "category": "slides",
+      "priority": 0.7,
+      "max_items": 20
+    },
+    {
+      "id": "speakerdeck-science",
+      "name": "Speaker Deck Science",
+      "type": "rss",
+      "url": "https://speakerdeck.com/c/science.atom",
+      "category": "slides",
+      "priority": 0.7,
+      "max_items": 20
+    }
+  ]
+}
