@@ -18,6 +18,10 @@
       "default_location": "global"
     }
   },
+  "preferences": {
+    "min_feedback_count": 20,
+    "max_adjustment": 0.7
+  },
   "grounding": {
     "enabled": true,
     "model": "gemini-3.5-flash",

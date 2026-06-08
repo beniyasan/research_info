@@ -8,6 +8,11 @@ import tempfile
 from typing import Any
 
 from .gemini_selector import run_vertex_gemini
+from .preferences import (
+    MAX_PREFERENCE_ADJUSTMENT,
+    MIN_FEEDBACK_FOR_SELECTION,
+    apply_preference_adjustments,
+)
 
 
 LLM_COMMAND_ENV = "AI_RESEARCH_LLM_COMMAND"
@@ -20,8 +25,39 @@ def select_report_articles(
     period: str,
     label: str,
     max_articles: int,
+    conn=None,
 ) -> dict[str, Any]:
     candidates = [_row_to_dict(row) for row in candidate_rows]
+    preference_config = config.get("preferences", {})
+    min_feedback_count = int(preference_config.get("min_feedback_count", MIN_FEEDBACK_FOR_SELECTION))
+    max_adjustment = float(preference_config.get("max_adjustment", MAX_PREFERENCE_ADJUSTMENT))
+    if conn is not None:
+        candidates, preference_context = apply_preference_adjustments(
+            conn,
+            candidates,
+            min_feedback_count=min_feedback_count,
+            max_adjustment=max_adjustment,
+        )
+    else:
+        preference_context = {
+            "active": False,
+            "total_feedback": 0,
+            "min_feedback_count": min_feedback_count,
+            "rating_counts": {},
+            "top_positive_features": [],
+            "top_negative_features": [],
+            "recent_comments": [],
+        }
+        candidates = [
+            {
+                **row,
+                "base_score": round(float(row.get("score") or 0), 3),
+                "preference_adjustment": 0.0,
+                "preference_score": round(float(row.get("score") or 0), 3),
+            }
+            for row in candidates
+        ]
+
     selection_config = config.get("selection", {})
     mode = selection_config.get("mode", "llm_if_available")
     provider = selection_config.get("provider", "command")
@@ -29,7 +65,13 @@ def select_report_articles(
     if mode in {"heuristic", "score"}:
         return _heuristic_selection(candidates, max_articles, "heuristic")
 
-    prompt = _build_prompt(candidates, period=period, label=label, max_articles=max_articles)
+    prompt = _build_prompt(
+        candidates,
+        period=period,
+        label=label,
+        max_articles=max_articles,
+        preference_context=preference_context,
+    )
     timeout = int(selection_config.get("timeout_seconds", 180))
 
     if provider in {"vertex_gemini", "gemini_vertex"}:
@@ -44,7 +86,11 @@ def select_report_articles(
                 "status": "ok",
                 "selected": selected,
                 "raw_output": result["text"][:2000],
-                "reason": f"usage={json.dumps(result.get('usage') or {}, ensure_ascii=False)}",
+                "reason": (
+                    f"usage={json.dumps(result.get('usage') or {}, ensure_ascii=False)}; "
+                    f"preference_active={preference_context.get('active')}; "
+                    f"feedback={preference_context.get('total_feedback', 0)}"
+                ),
             }
         except Exception as exc:
             if mode == "llm":
@@ -88,7 +134,15 @@ def select_report_articles(
 
 def _heuristic_selection(candidates: list[dict[str, Any]], max_articles: int, method: str) -> dict[str, Any]:
     selected = []
-    for row in candidates[:max_articles]:
+    ranked = sorted(
+        candidates,
+        key=lambda row: (
+            float(row.get("preference_score") or row.get("score") or 0),
+            float(row.get("score") or 0),
+        ),
+        reverse=True,
+    )
+    for row in ranked[:max_articles]:
         selected.append(
             {
                 **row,
@@ -101,7 +155,14 @@ def _heuristic_selection(candidates: list[dict[str, Any]], max_articles: int, me
     return {"method": method, "status": "ok", "selected": selected}
 
 
-def _build_prompt(candidates: list[dict[str, Any]], *, period: str, label: str, max_articles: int) -> str:
+def _build_prompt(
+    candidates: list[dict[str, Any]],
+    *,
+    period: str,
+    label: str,
+    max_articles: int,
+    preference_context: dict[str, Any] | None = None,
+) -> str:
     compact_articles = []
     for row in candidates:
         compact_articles.append(
@@ -109,7 +170,9 @@ def _build_prompt(candidates: list[dict[str, Any]], *, period: str, label: str, 
                 "id": row["id"],
                 "source": row["source_name"],
                 "category": row["source_category"],
-                "score": round(float(row["score"]), 2),
+                "score": round(float(row.get("preference_score", row["score"])), 2),
+                "base_score": round(float(row.get("base_score", row["score"])), 2),
+                "preference_adjustment": round(float(row.get("preference_adjustment", 0)), 2),
                 "title": row["title"],
                 "summary": _truncate(row.get("summary") or "", 700),
                 "keywords": json.loads(row.get("matched_keywords") or "[]")[:12],
@@ -117,6 +180,7 @@ def _build_prompt(candidates: list[dict[str, Any]], *, period: str, label: str, 
             }
         )
 
+    preference_prompt = _preference_prompt(preference_context or {})
     return f"""
 You are selecting articles for a Japanese AI engineering research report.
 
@@ -130,7 +194,9 @@ Selection policy:
 - Include a balanced mix of Japan tech community, official vendor updates, research, and overseas news when useful.
 - For non-Japanese articles, provide a Japanese title and Japanese summary. The report will also keep the original title and original summary.
 - For Japanese articles, you may keep the title, but still write a concise Japanese summary.
+- User preference signals are advisory. Keep adjacent and not-yet-articulated interest areas in the selection instead of narrowing only to known preferences.
 - Do not browse the web, inspect files, or run commands. Use only the candidate articles below.
+{preference_prompt}
 
 Return JSON only. Do not include Markdown fences.
 Schema:
@@ -148,6 +214,28 @@ Schema:
 Candidate articles:
 {json.dumps(compact_articles, ensure_ascii=False, indent=2)}
 """.strip()
+
+
+def _preference_prompt(context: dict[str, Any]) -> str:
+    total = int(context.get("total_feedback") or 0)
+    minimum = int(context.get("min_feedback_count") or MIN_FEEDBACK_FOR_SELECTION)
+    if not context.get("active"):
+        return (
+            f"\nPreference signals: currently inactive because only {total} feedback items exist; "
+            f"start using them after {minimum}."
+        )
+    summary = {
+        "total_feedback": total,
+        "rating_counts": context.get("rating_counts") or {},
+        "positive_signals": context.get("top_positive_features") or [],
+        "negative_signals": context.get("top_negative_features") or [],
+        "recent_comments": context.get("recent_comments") or [],
+    }
+    return (
+        "\nPreference signals are active. The candidate score includes only a weak bounded adjustment "
+        "from these signals. Use them as context, not as hard filters.\n"
+        f"Preference summary:\n{json.dumps(summary, ensure_ascii=False, indent=2)}"
+    )
 
 
 def _run_llm_command(command: str, prompt: str, *, timeout: int) -> str:

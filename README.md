@@ -9,7 +9,7 @@ AI Researcher collects AI-related public articles from Zenn, Qiita, RSS feeds, a
 - Web verification/discovery: Gemini Search Grounding
 - Report storage: local Markdown + SQLite
 - Cloud sync: Google Drive OAuth to personal My Drive
-- Notification: Discord webhook
+- Notification: Discord webhook / Discord bot feedback cards
 
 The default Docker schedule runs once every day at 09:00 Asia/Tokyo:
 
@@ -41,6 +41,9 @@ GOOGLE_CLOUD_LOCATION=global
 GEMINI_MODEL=gemini-3.5-flash
 GEMINI_GROUNDING_MODEL=gemini-3.5-flash
 DISCORD_WEBHOOK_URL=
+DISCORD_BOT_TOKEN=
+DISCORD_CHANNEL_ID=
+DISCORD_ALLOWED_USER_IDS=
 QIITA_TOKEN=
 ```
 
@@ -158,6 +161,19 @@ docker compose run --rm ai-researcher \
   python3 -m ai_researcher.cli notify-test
 ```
 
+Start the Discord feedback bot:
+
+```bash
+docker compose up -d ai-researcher-discord-bot
+```
+
+Summarize saved feedback:
+
+```bash
+docker compose run --rm ai-researcher \
+  python3 -m ai_researcher.cli feedback-summary
+```
+
 Discover candidate sources with Gemini Search:
 
 ```bash
@@ -184,5 +200,7 @@ docker compose run --rm ai-researcher \
 - This is a public-source-only implementation. No Slack or internal data is used.
 - For non-Japanese articles, reports keep the original title/summary and also show Gemini's Japanese title/summary.
 - Selected articles are verified with Gemini Search Grounding before Markdown/Discord output.
+- When `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` are set, selected articles are posted as individual Discord feedback cards. Without bot settings, the existing `DISCORD_WEBHOOK_URL` path is preserved.
+- Feedback is stored first and only becomes a weak selection signal after 20 feedback items. The per-article adjustment is capped at ±0.7 to keep adjacent and not-yet-articulated interests in the candidate pool.
 - Source discovery stores search results as candidates first; validated feeds enter `sources.status=candidate` and still need adoption history before promotion.
 - Final source/keyword evolution is based on report adoption history, not just collection volume.
