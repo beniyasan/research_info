@@ -9,7 +9,7 @@ AI Researcher は、Zenn、Qiita、RSS、arXiv、Hacker News、海外テック�
 - Web検証・発見: Gemini Search Grounding
 - レポート保存: ローカルMarkdown + SQLite
 - クラウド同期: Google Drive OAuth + 個人の My Drive
-- 通知: Discord Webhook
+- 通知: Discord Webhook / Discord Bot評価カード
 
 Dockerの標準スケジュールは、Asia/Tokyoで毎日09:00に1回です。
 
@@ -41,6 +41,9 @@ GOOGLE_CLOUD_LOCATION=global
 GEMINI_MODEL=gemini-3.5-flash
 GEMINI_GROUNDING_MODEL=gemini-3.5-flash
 DISCORD_WEBHOOK_URL=
+DISCORD_BOT_TOKEN=
+DISCORD_CHANNEL_ID=
+DISCORD_ALLOWED_USER_IDS=
 QIITA_TOKEN=
 ```
 
@@ -158,6 +161,19 @@ docker compose run --rm ai-researcher \
   python3 -m ai_researcher.cli notify-test
 ```
 
+Discord評価Botを単体起動:
+
+```bash
+docker compose --profile discord-bot up -d ai-researcher-discord-bot
+```
+
+評価サマリー確認:
+
+```bash
+docker compose run --rm ai-researcher \
+  python3 -m ai_researcher.cli feedback-summary
+```
+
 Gemini Searchでソース候補を手動発見:
 
 ```bash
@@ -212,6 +228,10 @@ OAuth同意画面がTestingのままだと、Driveスコープのrefresh token�
 8. 月曜・毎月1日はGemini Searchで新規ソース候補を発見
 9. 採用実績をもとにキーワード・ソースを進化
 ```
+
+`DISCORD_BOT_TOKEN` と `DISCORD_CHANNEL_ID` が設定されている場合、Discord通知はBotから記事ごとの評価カードとして投稿されます。各カードでは `刺さる`、`追う`、`既知`、`弱い`、`方向違い` の評価と自由コメントを保存できます。Bot設定がない場合は従来どおり `DISCORD_WEBHOOK_URL` のWebhook通知にフォールバックします。
+
+評価はすぐに選定へ強く反映しません。まずSQLiteの `article_feedback` / `article_feedback_events` に蓄積し、20件以上の評価が集まった後に、最大±0.7の弱い補正としてGemini選定候補へ反映します。これは既知の関心に閉じすぎず、まだ言語化していない隣接領域を拾うためです。
 
 海外記事については、原文タイトル・原文要約を残しつつ、Geminiが生成した日本語タイトル・日本語要約も併記します。
 

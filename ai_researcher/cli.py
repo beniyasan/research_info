@@ -13,6 +13,7 @@ from .config import DEFAULT_CONFIG_PATH, load_config, seed_from_config
 from .drive_sync import authorize_drive, sync_existing_reports, sync_one_report
 from .evolver import evolve
 from .notifier import notify_test
+from .preferences import feedback_summary
 from .reporter import generate_report
 from .source_discovery import discover_sources
 
@@ -37,6 +38,8 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("evolve", help="Promote/demote keywords, sources, and candidates")
     sub.add_parser("notify-test", help="Send a Discord test notification")
+    sub.add_parser("discord-bot", help="Run the Discord feedback Gateway bot")
+    sub.add_parser("feedback-summary", help="Summarize stored Discord article feedback")
 
     drive_auth = sub.add_parser("drive-auth", help="Authorize Google Drive OAuth for My Drive sync")
     drive_auth.add_argument("--port", type=int, default=8080)
@@ -95,6 +98,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "notify-test":
         print_json(notify_test(config))
+        return 0
+
+    if args.command == "discord-bot":
+        db.init_db(conn)
+        from .discord_bot import run_discord_bot
+
+        run_discord_bot(args.db)
+        return 0
+
+    if args.command == "feedback-summary":
+        db.init_db(conn)
+        print_json(feedback_summary(conn))
         return 0
 
     if args.command == "drive-auth":

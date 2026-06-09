@@ -173,6 +173,46 @@ CREATE TABLE IF NOT EXISTS article_verifications (
 
 CREATE INDEX IF NOT EXISTS idx_article_verifications_status
   ON article_verifications(status, checked_at);
+
+CREATE TABLE IF NOT EXISTS article_feedback (
+  report_key TEXT NOT NULL,
+  article_id TEXT NOT NULL,
+  discord_user_id TEXT NOT NULL,
+  rating TEXT NOT NULL,
+  comment TEXT,
+  message_id TEXT,
+  channel_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  metadata TEXT NOT NULL DEFAULT '{}',
+  PRIMARY KEY(report_key, article_id, discord_user_id),
+  FOREIGN KEY(article_id) REFERENCES articles(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_feedback_article
+  ON article_feedback(article_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_article_feedback_rating
+  ON article_feedback(rating, updated_at);
+
+CREATE TABLE IF NOT EXISTS article_feedback_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  report_key TEXT NOT NULL,
+  article_id TEXT NOT NULL,
+  discord_user_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  rating TEXT,
+  comment TEXT,
+  message_id TEXT,
+  channel_id TEXT,
+  event_at TEXT NOT NULL,
+  metadata TEXT NOT NULL DEFAULT '{}',
+  FOREIGN KEY(article_id) REFERENCES articles(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_feedback_events_article
+  ON article_feedback_events(article_id, event_at);
+CREATE INDEX IF NOT EXISTS idx_article_feedback_events_report
+  ON article_feedback_events(report_key, event_at);
 """
 
 
@@ -182,6 +222,7 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 

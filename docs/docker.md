@@ -1,6 +1,6 @@
 # Docker Operation
 
-The production path is Docker Compose. The container runs `supercronic` with `config/crontab`, which starts `scripts/run_scheduled.sh` every day at 09:00 Asia/Tokyo.
+The production path is Docker Compose. The `ai-researcher` service runs `supercronic` with `config/crontab`, which starts `scripts/run_scheduled.sh` every day at 09:00 Asia/Tokyo. The optional `ai-researcher-discord-bot` service is behind the `discord-bot` profile. It uses the same image and keeps a Discord Gateway connection open for article feedback interactions.
 
 ## Files and Volumes
 
@@ -47,8 +47,13 @@ Optional:
 
 ```env
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+DISCORD_BOT_TOKEN=...
+DISCORD_CHANNEL_ID=...
+DISCORD_ALLOWED_USER_IDS=123456789012345678,234567890123456789
 QIITA_TOKEN=...
 ```
+
+If `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` are set, report generation posts article-by-article feedback cards through the bot. If they are empty, the existing webhook notification path is used.
 
 ## First Start
 
@@ -65,6 +70,12 @@ Start the scheduler:
 docker compose up -d --build
 ```
 
+Start the Discord feedback bot as well:
+
+```bash
+docker compose --profile discord-bot up -d --build ai-researcher ai-researcher-discord-bot
+```
+
 Run once immediately:
 
 ```bash
@@ -74,7 +85,7 @@ docker compose run --rm ai-researcher bash scripts/run_scheduled.sh
 ## Logs
 
 ```bash
-docker compose logs -f ai-researcher
+docker compose logs -f ai-researcher ai-researcher-discord-bot
 ```
 
 The scheduled job is protected by `flock` at `data/ai-researcher.lock`. If a previous run is still active, the next run is skipped.
@@ -99,3 +110,4 @@ docker compose up -d --build
 ```
 
 Keep `data/`, `reports/`, and `secrets/` backed up before moving the service to another machine.
+On a VPS, keep both Compose services on the same mounted `data/` directory so scheduled reports and Discord feedback write to the same SQLite database.

@@ -48,6 +48,7 @@ def generate_report(
             period=period,
             label=label,
             max_articles=max_articles,
+            conn=conn,
         )
         selected = selection["selected"]
         report_key = f"{period}:{label}"
@@ -94,6 +95,7 @@ def generate_report(
             config=config,
             drive=details["drive"],
             verification=details["verification"],
+            report_key=report_key,
         )
         db.finish_run(conn, run_id, "ok", details)
         return details

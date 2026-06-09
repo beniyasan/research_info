@@ -53,11 +53,21 @@ docker compose run --rm ai-researcher \
 
 ## Discord
 
-Set:
+For webhook-only notifications, set:
 
 ```env
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
+
+For interactive article feedback cards, set:
+
+```env
+DISCORD_BOT_TOKEN=...
+DISCORD_CHANNEL_ID=...
+DISCORD_ALLOWED_USER_IDS=123456789012345678
+```
+
+`DISCORD_ALLOWED_USER_IDS` is optional. When set, only those Discord users can save feedback.
 
 Test:
 
@@ -66,7 +76,20 @@ docker compose run --rm ai-researcher \
   python3 -m ai_researcher.cli notify-test
 ```
 
-Discord notifications include the Drive report URL when Drive sync succeeds.
+Run the feedback bot:
+
+```bash
+docker compose --profile discord-bot up -d ai-researcher-discord-bot
+```
+
+Review stored feedback:
+
+```bash
+docker compose run --rm ai-researcher \
+  python3 -m ai_researcher.cli feedback-summary
+```
+
+Discord notifications include the Drive report URL when Drive sync succeeds. When bot settings are present, report generation posts one feedback card per selected article and stores interaction history in `article_feedback` and `article_feedback_events`. When bot settings are absent, the webhook path continues to work.
 
 ## Common Failures
 
@@ -102,3 +125,4 @@ Rerun `drive-auth`. If this happens every 7 days, check that the OAuth consent s
 `database is locked`
 
 The scheduled Docker path uses `flock`. Avoid starting multiple manual runs at the same time.
+The feedback bot uses the same SQLite database and configures a SQLite busy timeout. If lock errors persist, check for long manual runs or multiple Compose stacks pointing at the same `data/research.db`.
