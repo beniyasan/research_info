@@ -1,6 +1,6 @@
 # Docker Operation
 
-The production path is Docker Compose. The `ai-researcher` service runs `supercronic` with `config/crontab`, which starts `scripts/run_scheduled.sh` every day at 09:00 Asia/Tokyo. The optional `ai-researcher-discord-bot` service uses the same image and keeps a Discord Gateway connection open for article feedback interactions.
+The production path is Docker Compose. The `ai-researcher` service runs `supercronic` with `config/crontab`, which starts `scripts/run_scheduled.sh` every day at 09:00 Asia/Tokyo. The optional `ai-researcher-discord-bot` service is behind the `discord-bot` profile. It uses the same image and keeps a Discord Gateway connection open for article feedback interactions.
 
 ## Files and Volumes
 
@@ -73,7 +73,7 @@ docker compose up -d --build
 Start the Discord feedback bot as well:
 
 ```bash
-docker compose up -d --build ai-researcher ai-researcher-discord-bot
+docker compose --profile discord-bot up -d --build ai-researcher ai-researcher-discord-bot
 ```
 
 Run once immediately:

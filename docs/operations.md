@@ -79,7 +79,7 @@ docker compose run --rm ai-researcher \
 Run the feedback bot:
 
 ```bash
-docker compose up -d ai-researcher-discord-bot
+docker compose --profile discord-bot up -d ai-researcher-discord-bot
 ```
 
 Review stored feedback:

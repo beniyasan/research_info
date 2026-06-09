@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -17,6 +18,8 @@ from .discord_bot import (
 
 DISCORD_WEBHOOK_ENV = "DISCORD_WEBHOOK_URL"
 DISCORD_API_BASE = "https://discord.com/api/v10"
+DISCORD_BOT_MAX_RETRIES = 3
+DISCORD_RATE_LIMIT_MAX_SLEEP_SECONDS = 30.0
 
 
 def notify_report(
@@ -240,28 +243,69 @@ def notify_test(config: dict[str, Any]) -> dict[str, Any]:
     return post_discord_webhook(webhook_url, payload)
 
 
-def post_discord_bot_message(bot_token: str, channel_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+def post_discord_bot_message(
+    bot_token: str,
+    channel_id: str,
+    payload: dict[str, Any],
+    *,
+    max_retries: int = DISCORD_BOT_MAX_RETRIES,
+    sleep_fn=time.sleep,
+) -> dict[str, Any]:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    req = Request(
-        f"{DISCORD_API_BASE}/channels/{channel_id}/messages",
-        data=body,
-        headers={
-            "Authorization": f"Bot {bot_token}",
-            "Content-Type": "application/json",
-            "User-Agent": "ai-researcher/0.1",
-        },
-        method="POST",
-    )
+    for attempt in range(max_retries + 1):
+        req = Request(
+            f"{DISCORD_API_BASE}/channels/{channel_id}/messages",
+            data=body,
+            headers={
+                "Authorization": f"Bot {bot_token}",
+                "Content-Type": "application/json",
+                "User-Agent": "ai-researcher/0.1",
+            },
+            method="POST",
+        )
+        try:
+            with urlopen(req, timeout=20) as resp:
+                response_body = resp.read().decode("utf-8", errors="replace")
+                data = json.loads(response_body) if response_body else {}
+                return {"status": "sent", "http_status": resp.status, "message_id": data.get("id"), "retries": attempt}
+        except HTTPError as exc:
+            response_body = exc.read().decode("utf-8", errors="replace")
+            if exc.code == 429 and attempt < max_retries:
+                sleep_fn(_discord_retry_after(exc, response_body))
+                continue
+            result = {"status": "failed", "http_status": exc.code, "error": response_body[:500]}
+            if exc.code == 429:
+                result["retries"] = attempt
+            return result
+        except URLError as exc:
+            return {"status": "failed", "error": str(exc)[:500], "retries": attempt}
+    return {"status": "failed", "error": "exhausted Discord retry attempts", "retries": max_retries}
+
+
+def _discord_retry_after(exc: HTTPError, response_body: str) -> float:
+    for header_name in ("Retry-After", "X-RateLimit-Reset-After"):
+        value = exc.headers.get(header_name) if exc.headers else None
+        seconds = _coerce_retry_after(value)
+        if seconds is not None:
+            return min(seconds, DISCORD_RATE_LIMIT_MAX_SLEEP_SECONDS)
     try:
-        with urlopen(req, timeout=20) as resp:
-            response_body = resp.read().decode("utf-8", errors="replace")
-            data = json.loads(response_body) if response_body else {}
-            return {"status": "sent", "http_status": resp.status, "message_id": data.get("id")}
-    except HTTPError as exc:
-        response_body = exc.read().decode("utf-8", errors="replace")
-        return {"status": "failed", "http_status": exc.code, "error": response_body[:500]}
-    except URLError as exc:
-        return {"status": "failed", "error": str(exc)[:500]}
+        payload = json.loads(response_body) if response_body else {}
+    except json.JSONDecodeError:
+        payload = {}
+    seconds = _coerce_retry_after(payload.get("retry_after"))
+    if seconds is None:
+        return 1.0
+    return min(seconds, DISCORD_RATE_LIMIT_MAX_SLEEP_SECONDS)
+
+
+def _coerce_retry_after(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        return None
+    return max(seconds, 0.0)
 
 
 def post_discord_webhook(webhook_url: str, payload: dict[str, Any]) -> dict[str, Any]:

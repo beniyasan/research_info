@@ -7,7 +7,7 @@ from typing import Any
 from urllib.parse import quote, unquote
 
 from . import db
-from .preferences import RATING_COMMENT, RATING_OPTIONS, record_feedback
+from .preferences import record_feedback
 
 
 DISCORD_BOT_TOKEN_ENV = "DISCORD_BOT_TOKEN"
@@ -127,7 +127,6 @@ class FeedbackClient(discord.Client if discord is not None else object):  # type
             self._record_feedback(
                 component_id,
                 interaction,
-                rating=RATING_COMMENT,
                 comment=comment,
             )
         except Exception as exc:
@@ -140,7 +139,7 @@ class FeedbackClient(discord.Client if discord is not None else object):  # type
         component_id: FeedbackComponentId,
         interaction: Any,
         *,
-        rating: str,
+        rating: str | None = None,
         comment: str | None = None,
     ) -> None:
         message = getattr(interaction, "message", None)

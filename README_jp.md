@@ -164,7 +164,7 @@ docker compose run --rm ai-researcher \
 Discord評価Botを単体起動:
 
 ```bash
-docker compose up -d ai-researcher-discord-bot
+docker compose --profile discord-bot up -d ai-researcher-discord-bot
 ```
 
 評価サマリー確認:

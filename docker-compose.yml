@@ -25,6 +25,7 @@ services:
       - ./secrets:/secrets
 
   ai-researcher-discord-bot:
+    profiles: ["discord-bot"]
     build: .
     container_name: ai-researcher-discord-bot
     restart: unless-stopped

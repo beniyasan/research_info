@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import json
+from io import BytesIO
 import os
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 from ai_researcher import db
 from ai_researcher.discord_bot import make_rate_custom_id, parse_component_custom_id
-from ai_researcher.notifier import notify_report
+from ai_researcher.notifier import notify_report, post_discord_bot_message
 from ai_researcher.preferences import apply_preference_adjustments, record_feedback
 from ai_researcher.utils import utc_now
 
@@ -59,6 +61,27 @@ class FeedbackTestCase(unittest.TestCase):
 
         events = self.conn.execute("SELECT COUNT(*) AS count FROM article_feedback_events").fetchone()
         self.assertEqual(events["count"], 2)
+
+    def test_comment_feedback_preserves_existing_rating(self) -> None:
+        record_feedback(
+            self.conn,
+            report_key="daily:2026-06-08",
+            article_id="article-1",
+            discord_user_id="user-1",
+            rating="刺さる",
+        )
+        result = record_feedback(
+            self.conn,
+            report_key="daily:2026-06-08",
+            article_id="article-1",
+            discord_user_id="user-1",
+            comment="補足コメント",
+        )
+
+        latest = self.conn.execute("SELECT * FROM article_feedback").fetchone()
+        self.assertEqual(result["rating"], "刺さる")
+        self.assertEqual(latest["rating"], "刺さる")
+        self.assertIn("補足コメント", latest["comment"])
 
     def test_preference_adjustment_is_inactive_before_threshold_and_capped_after(self) -> None:
         candidate = self._candidate("candidate-1")
@@ -142,6 +165,42 @@ class FeedbackTestCase(unittest.TestCase):
         self.assertEqual(article_payload["components"][0]["components"][0]["type"], 3)
         self.assertEqual(article_payload["components"][1]["components"][0]["label"], "コメント")
         self.assertEqual(article_payload["components"][1]["components"][1]["style"], 5)
+
+    def test_discord_bot_message_retries_after_rate_limit(self) -> None:
+        rate_limit = HTTPError(
+            "https://discord.test/channels/channel/messages",
+            429,
+            "Too Many Requests",
+            {"Retry-After": "0"},
+            BytesIO(b"{\"retry_after\": 0}"),
+        )
+
+        class Response:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return b"{\"id\": \"message-1\"}"
+
+        sleep_calls = []
+        with patch("ai_researcher.notifier.urlopen") as open_url:
+            open_url.side_effect = [rate_limit, Response()]
+            result = post_discord_bot_message(
+                "token",
+                "channel",
+                {"content": "hello"},
+                sleep_fn=sleep_calls.append,
+            )
+
+        self.assertEqual(result["status"], "sent")
+        self.assertEqual(result["message_id"], "message-1")
+        self.assertEqual(result["retries"], 1)
+        self.assertEqual(sleep_calls, [0.0])
 
     def _seed_article(self, article_id: str) -> None:
         db.seed_source(
