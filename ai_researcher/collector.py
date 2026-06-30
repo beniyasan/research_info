@@ -6,13 +6,14 @@ from pathlib import Path
 from typing import Any
 
 from . import db
+from .config import score_threshold
 from .fetchers import fetch_source
 from .scorer import extract_candidate_keywords, score_article
 from .utils import canonical_url, cluster_key, local_today, stable_id, url_domain, utc_now
 
 
 def collect(conn, config: dict[str, Any], *, raw_dir: str | Path = "data/raw") -> dict[str, Any]:
-    threshold = float(config.get("reporting", {}).get("score_threshold", 2.5))
+    threshold = score_threshold(config)
     keywords = db.get_keywords(conn)
     sources = db.get_sources(conn)
     run_id = db.begin_run(conn, "collect", {"source_count": len(sources)})
@@ -36,8 +37,7 @@ def collect(conn, config: dict[str, Any], *, raw_dir: str | Path = "data/raw") -
                 url = canonical_url(item.get("url"))
                 if not url:
                     continue
-                scored = score_article(item, source, keywords)
-                scored["relevance"] = 1 if scored["score"] >= threshold else 0
+                scored = score_article(item, source, keywords, threshold=threshold)
                 article = {
                     **item,
                     **scored,
@@ -50,7 +50,7 @@ def collect(conn, config: dict[str, Any], *, raw_dir: str | Path = "data/raw") -
                 db.upsert_article(conn, article)
                 fetched_articles.append(article)
 
-                if article["score"] >= threshold:
+                if article["relevance"]:
                     relevant_hits += 1
                     domain = url_domain(url)
                     if domain:

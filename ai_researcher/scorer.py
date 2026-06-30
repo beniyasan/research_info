@@ -4,6 +4,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
+from .config import DEFAULT_SCORE_THRESHOLD
 from .utils import normalize_space, parse_date
 
 
@@ -77,7 +78,13 @@ STOP_CANDIDATES = {
 }
 
 
-def score_article(article: dict[str, Any], source: dict[str, Any], keywords: list[str]) -> dict[str, Any]:
+def score_article(
+    article: dict[str, Any],
+    source: dict[str, Any],
+    keywords: list[str],
+    *,
+    threshold: float = DEFAULT_SCORE_THRESHOLD,
+) -> dict[str, Any]:
     title = normalize_space(article.get("title", ""))
     summary = normalize_space(article.get("summary", ""))
     tags = [str(tag) for tag in article.get("tags", [])]
@@ -135,9 +142,10 @@ def score_article(article: dict[str, Any], source: dict[str, Any], keywords: lis
         score += min(popularity, 2.0)
         reasons.append("popular")
 
+    rounded_score = round(score, 3)
     return {
-        "score": round(score, 3),
-        "relevance": 1 if score >= 2.5 else 0,
+        "score": rounded_score,
+        "relevance": 1 if rounded_score >= threshold else 0,
         "reasons": reasons,
         "matched_keywords": matched[:20],
     }

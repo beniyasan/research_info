@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from . import db
 from .article_verifier import verify_selected_articles
+from .config import score_threshold
 from .drive_sync import sync_report
 from .llm_selector import select_report_articles
 from .notifier import notify_report
@@ -33,7 +34,7 @@ def generate_report(
     if period not in PERIOD_DAYS:
         raise ValueError(f"Unsupported period: {period}")
 
-    threshold = float(config.get("reporting", {}).get("score_threshold", 2.5))
+    threshold = score_threshold(config)
     max_articles = int(config.get("reporting", {}).get("max_articles", 30))
     candidate_limit = int(config.get("selection", {}).get("candidate_limit", max_articles * 3))
     start_utc, end_utc, label = _period_bounds(period, report_date)

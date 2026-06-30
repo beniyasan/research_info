@@ -17,4 +17,5 @@ logs/
 .serena/
 .agents/
 
-docs/
+docs/*
+!docs/refactoring-report.md
