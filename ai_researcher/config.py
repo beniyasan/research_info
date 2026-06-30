@@ -8,6 +8,7 @@ from . import db
 
 
 DEFAULT_CONFIG_PATH = "config/sources.json"
+DEFAULT_SCORE_THRESHOLD = 2.5
 
 
 def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> dict[str, Any]:
@@ -29,4 +30,4 @@ def seed_from_config(conn, config: dict[str, Any]) -> dict[str, int]:
 
 
 def score_threshold(config: dict[str, Any]) -> float:
-    return float(config.get("reporting", {}).get("score_threshold", 2.5))
+    return float(config.get("reporting", {}).get("score_threshold", DEFAULT_SCORE_THRESHOLD))
